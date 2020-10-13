@@ -1,0 +1,19 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "by.sergeantbulkin.proto";
+
+service method
+{
+  rpc get_method(MethodRequest)  returns (MethodResponse);
+}
+
+message MethodRequest
+{
+
+}
+
+message MethodResponse
+{
+  int32  responseCode  = 2;
+}
