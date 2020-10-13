@@ -5,7 +5,7 @@ option java_package = "by.sergeantbulkin.proto";
 
 service method
 {
-  rpc get_method(MethodRequest)  returns (MethodResponse);
+  rpc getMethodNumber(MethodRequest) returns (MethodResponse);
 }
 
 message MethodRequest
@@ -15,5 +15,5 @@ message MethodRequest
 
 message MethodResponse
 {
-  int32  responseCode  = 2;
+  int32  responseCode  = 1;
 }

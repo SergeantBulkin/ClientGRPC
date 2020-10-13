@@ -4,11 +4,6 @@ import android.app.Activity;
 import android.content.Context;
 import android.os.AsyncTask;
 import android.os.Bundle;
-
-import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
-import androidx.fragment.app.Fragment;
-
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -16,24 +11,30 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
-import java.io.PrintWriter;
-import java.io.StringWriter;
 import java.lang.ref.WeakReference;
 import java.util.concurrent.TimeUnit;
 
-import by.sergeantbulkin.grpc.R;
-import by.sergeantbulkin.grpc.databinding.FragmentBaseBinding;
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+import androidx.fragment.app.Fragment;
 import by.sergeantbulkin.proto.MethodRequest;
 import by.sergeantbulkin.proto.MethodResponse;
+import by.sergeantbulkin.grpc.R;
+import by.sergeantbulkin.proto.RxmethodGrpc;
+import by.sergeantbulkin.grpc.databinding.FragmentBaseBinding;
 import by.sergeantbulkin.proto.methodGrpc;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
+import io.reactivex.Single;
+import io.reactivex.android.schedulers.AndroidSchedulers;
+import io.reactivex.observers.DisposableSingleObserver;
+import io.reactivex.schedulers.Schedulers;
 
 public class BaseFragment extends Fragment
 {
     //----------------------------------------------------------------------------------------------
     private final String HOST = "192.168.43.231";
-    private final String PORT = "9090";
+    private final int PORT = 9090;
     //----------------------------------------------------------------------------------------------
     FragmentBaseBinding binding;
     //----------------------------------------------------------------------------------------------
@@ -69,8 +70,47 @@ public class BaseFragment extends Fragment
     {
         binding.button.setOnClickListener(v ->
         {
+            clearText();
             sendMessage();
         });
+        binding.buttonRx.setOnClickListener(v ->
+        {
+            clearText();
+            sendRxMessage();
+        });
+    }
+
+    private void sendRxMessage()
+    {
+        binding.buttonRx.setEnabled(false);
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
+        RxmethodGrpc.RxmethodStub stub = RxmethodGrpc.newRxStub(channel);
+        Single<MethodRequest> req = Single.just(MethodRequest.newBuilder().build());
+        Single<MethodResponse> resp = req.compose(stub::getMethodNumber);
+        resp.subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribe(new DisposableSingleObserver<MethodResponse>()
+                {
+                    @Override
+                    public void onSuccess(MethodResponse methodResponse)
+                    {
+                        binding.textView.setText(String.valueOf(methodResponse.getResponseCode()));
+                        binding.buttonRx.setEnabled(true);
+                        try
+                        {
+                            channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
+                        } catch (InterruptedException e)
+                        {
+                            Thread.currentThread().interrupt();
+                        }
+                    }
+
+                    @Override
+                    public void onError(Throwable e)
+                    {
+                        e.printStackTrace();
+                    }
+                });
     }
     //----------------------------------------------------------------------------------------------
     private void sendMessage()
@@ -80,7 +120,12 @@ public class BaseFragment extends Fragment
         binding.textView.setText("");
 
         new GrpcTask(requireActivity())
-                .execute(HOST, PORT);
+                .execute(HOST, String.valueOf(PORT));
+    }
+    //----------------------------------------------------------------------------------------------
+    private void clearText()
+    {
+        binding.textView.setText("");
     }
     //----------------------------------------------------------------------------------------------
     private static class GrpcTask extends AsyncTask<String, Void, String>
@@ -104,15 +149,12 @@ public class BaseFragment extends Fragment
                 channel = ManagedChannelBuilder.forAddress(host, port).usePlaintext().build();
                 methodGrpc.methodBlockingStub stub = methodGrpc.newBlockingStub(channel);
                 MethodRequest request = MethodRequest.newBuilder().build();
-                MethodResponse response = stub.getMethod(request);
+                MethodResponse response = stub.getMethodNumber(request);
                 return String.valueOf(response.getResponseCode());
             } catch (Exception e)
             {
-                StringWriter sw = new StringWriter();
-                PrintWriter pw = new PrintWriter(sw);
-                e.printStackTrace(pw);
-                pw.flush();
-                return String.format("Failed... : %n%s", sw);
+                e.printStackTrace();
+                return "Failed... ";
             }
         }
 

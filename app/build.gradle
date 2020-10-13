@@ -41,9 +41,9 @@ protobuf {
         grpc {
             artifact = 'io.grpc:protoc-gen-grpc-java:1.32.1' // CURRENT_GRPC_VERSION
         }
-        /*rxgrpc {
+        rxgrpc {
             artifact = 'com.salesforce.servicelibs:rxgrpc:1.0.1'
-        }*/
+        }
     }
     generateProtoTasks {
         all().each { task ->
@@ -53,7 +53,7 @@ protobuf {
             task.plugins {
                 grpc { // Options added to --grpc_out
                     option 'lite' }
-                /*rxgrpc {}*/
+                rxgrpc {}
             }
         }
     }
@@ -65,20 +65,19 @@ dependencies {
     implementation 'androidx.constraintlayout:constraintlayout:2.0.2'
 
     // You need to build grpc-java to obtain these libraries below.
-    implementation 'io.grpc:grpc-okhttp:1.32.1' // CURRENT_GRPC_VERSION
+    implementation 'io.grpc:grpc-okhttp:1.32.2' // CURRENT_GRPC_VERSION
     implementation 'io.grpc:grpc-protobuf-lite:1.32.2' // CURRENT_GRPC_VERSION
     implementation 'io.grpc:grpc-stub:1.32.2' // CURRENT_GRPC_VERSION
-    implementation 'org.apache.tomcat:annotations-api:6.0.53'
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
-/*    //RxJava 2
+    //RxJava 2
     implementation 'io.reactivex.rxjava2:rxjava:2.2.19'
+    //RxAndroid
+    implementation 'io.reactivex.rxjava2:rxandroid:2.0.2'
 
-    implementation group: 'com.salesforce.servicelibs', name: 'reactor-grpc', version: '1.0.1'
-    implementation group: 'com.salesforce.servicelibs', name: 'reactive-grpc-common', version: '1.0.1'
-    implementation group: 'com.salesforce.servicelibs', name: 'rxgrpc-stub', version: '1.0.1'*/
+    implementation group: 'com.salesforce.servicelibs', name: 'rxgrpc-stub', version: '1.0.1'
 
-    testImplementation 'junit:junit:4.12'
+    testImplementation 'junit:junit:4.13.1'
     androidTestImplementation 'androidx.test.ext:junit:1.1.2'
     androidTestImplementation 'androidx.test.espresso:espresso-core:3.3.0'
 }
