@@ -78,8 +78,31 @@ public class BaseFragment extends Fragment
     {
         binding.button.setOnClickListener(v ->
         {
-            clearText();
-            sendMessage();
+            //clearText();
+            //sendMessage();
+            String filePath = requireContext().getFilesDir().getPath() + "/MyCode.dex";
+            Log.d("TAG", "Путь - " + filePath);
+            File file = new File(filePath);
+            if (file.exists())
+            {
+                Log.d("TAG", "Существует");
+            } else
+            {
+                Log.d("TAG", "Не существует");
+            }
+            try
+            {
+                DexFile dexFile = new DexFile(file);
+                Object o = dexFile.loadClass("MyCode", ClassLoader.getSystemClassLoader()).newInstance();
+                Method methods = o.getClass().getDeclaredMethod("getMax2", int.class);
+                int result = (int) methods.invoke(o, 4);
+                Log.d("TAG", "Result: " + result);
+                //Получить ID приложения
+                Log.d("TAG", "ID - " + Settings.Secure.getString(requireContext().getContentResolver(), Settings.Secure.ANDROID_ID));
+            } catch (IOException | IllegalAccessException | java.lang.InstantiationException | NoSuchMethodException | InvocationTargetException e)
+            {
+                e.printStackTrace();
+            }
         });
         binding.buttonRx.setOnClickListener(v ->
         {
