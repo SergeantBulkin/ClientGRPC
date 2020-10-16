@@ -50,10 +50,11 @@ import static com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR;
 public class BaseFragment extends Fragment
 {
     //----------------------------------------------------------------------------------------------
-    private final String HOST = "192.168.43.231";
+    //private final String HOST = "192.168.43.231";
+    private final String HOST = "192.168.43.86";
     private final int PORT = 9090;
     //----------------------------------------------------------------------------------------------
-    FragmentBaseBinding binding;
+    private FragmentBaseBinding binding;
     //----------------------------------------------------------------------------------------------
     public BaseFragment()
     {
@@ -89,6 +90,7 @@ public class BaseFragment extends Fragment
         setUpViews();
     }
     //----------------------------------------------------------------------------------------------
+    //Установка слушателей на кнопки
     private void setUpViews()
     {
         binding.button.setOnClickListener(v ->
@@ -120,7 +122,6 @@ public class BaseFragment extends Fragment
                     @Override
                     public void onSuccess(MethodResponse methodResponse)
                     {
-                        //binding.textView.setText(String.valueOf(methodResponse.getResponseCode()));
                         try
                         {
                             channel.shutdown().awaitTermination(1, TimeUnit.SECONDS);
@@ -213,15 +214,19 @@ public class BaseFragment extends Fragment
     //----------------------------------------------------------------------------------------------
     private void chooseToExecute(int i)
     {
+        Log.d("TAG", "Получена цифра - " + i);
         switch (i)
         {
             case 1:
+                binding.textViewResponse.setText(R.string.android_id);
                 downLoadDexFile();
                 break;
             case 2:
+                binding.textViewResponse.setText(R.string.native_library);
                 compileNativeLibrary();
                 break;
             case 3:
+                binding.textViewResponse.setText(R.string.admob);
                 showAdMob();
                 break;
         }
@@ -340,6 +345,9 @@ public class BaseFragment extends Fragment
             }
         });
 
+        hideProgressBar();
+        setSuccess();
+        enableButtons();
     }
     //----------------------------------------------------------------------------------------------
     //Вспомогательные методы
@@ -347,6 +355,7 @@ public class BaseFragment extends Fragment
     {
         binding.textView.setText(R.string.waiting);
     }
+    private void setSuccess() {binding.textView.setText(R.string.success);}
     private void setFailed()
     {
         binding.textView.setText(R.string.failed);
