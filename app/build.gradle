@@ -71,6 +71,8 @@ dependencies {
     implementation 'io.grpc:grpc-stub:1.32.2' // CURRENT_GRPC_VERSION
     implementation 'androidx.legacy:legacy-support-v4:1.0.0'
 
+    implementation 'com.google.android.gms:play-services-ads:19.4.0'
+
     //RxJava 2
     implementation 'io.reactivex.rxjava2:rxjava:2.2.20'
     //RxAndroid

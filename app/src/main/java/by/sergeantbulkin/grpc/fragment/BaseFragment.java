@@ -12,6 +12,11 @@ import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.TextView;
 
+import com.google.android.gms.ads.AdListener;
+import com.google.android.gms.ads.AdRequest;
+import com.google.android.gms.ads.InterstitialAd;
+import com.google.android.gms.ads.MobileAds;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -39,6 +44,8 @@ import proto.MethodRequest;
 import proto.MethodResponse;
 import proto.RxFileDownloadGrpc;
 import proto.RxMethodGrpc;
+
+import static com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR;
 
 public class BaseFragment extends Fragment
 {
@@ -71,6 +78,12 @@ public class BaseFragment extends Fragment
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState)
     {
         super.onViewCreated(view, savedInstanceState);
+
+        //Инициализация рекламы
+        MobileAds.initialize(requireActivity(), code ->
+        {
+            Log.d("TAG", "Инициализация рекламы во фрагменте");
+        });
 
         //Установка слушателя
         setUpViews();
@@ -313,6 +326,19 @@ public class BaseFragment extends Fragment
 
     private void showAdMob()
     {
+        AdRequest adRequest = new AdRequest.Builder().addTestDevice(DEVICE_ID_EMULATOR).build();
+        InterstitialAd interstitialAd = new InterstitialAd(requireActivity());
+        interstitialAd.setAdUnitId("ca-app-pub-8501671653071605/2568258533");
+        interstitialAd.loadAd(adRequest);
+        interstitialAd.setAdListener(new AdListener()
+        {
+            @Override
+            public void onAdLoaded()
+            {
+                Log.d("TAG", "Загружена");
+                interstitialAd.show();
+            }
+        });
 
     }
     //----------------------------------------------------------------------------------------------
