@@ -1,3 +1,5 @@
 <resources>
     <string name="app_name">ClientGRPC</string>
+    <string name="waiting">Wait…</string>
+    <string name="failed">Failed…</string>
 </resources>

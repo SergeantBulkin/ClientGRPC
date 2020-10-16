@@ -1,0 +1,20 @@
+syntax = "proto3";
+
+option java_multiple_files = true;
+option java_package = "proto";
+option java_outer_classname = "FileDownloadProto";
+
+service FileDownload
+{
+  rpc Download(FileDownloadRequst) returns (DataChunk) {}
+}
+
+message DataChunk
+{
+  bytes data = 1;
+}
+
+message FileDownloadRequst
+{
+  string filename = 1;
+}

@@ -1,11 +1,12 @@
 syntax = "proto3";
 
 option java_multiple_files = true;
-option java_package = "by.sergeantbulkin.proto";
+option java_package = "proto";
+option java_outer_classname = "MethodProto";
 
-service method
+service Method
 {
-  rpc getMethodNumber(MethodRequest) returns (MethodResponse);
+  rpc GetMethodNumber(MethodRequest) returns (MethodResponse);
 }
 
 message MethodRequest

@@ -10,5 +10,4 @@
         <item name="android:colorBackground">@color/my_app_background_color</item>
         <item name="colorError">@color/colorError</item>
     </style>
-
 </resources>
