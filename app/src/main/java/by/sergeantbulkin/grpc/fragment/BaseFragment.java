@@ -21,7 +21,11 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.lang.ref.WeakReference;
+import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.Collection;
+import java.util.Collections;
 import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.NonNull;
@@ -30,6 +34,8 @@ import androidx.fragment.app.Fragment;
 import by.sergeantbulkin.grpc.R;
 import by.sergeantbulkin.grpc.databinding.FragmentBaseBinding;
 import by.sergeantbulkin.grpc.model.DisposableManager;
+import by.sergeantbulkin.grpc.model.NativeClass;
+import dalvik.system.BaseDexClassLoader;
 import dalvik.system.DexClassLoader;
 import io.grpc.ManagedChannel;
 import io.grpc.ManagedChannelBuilder;
@@ -223,7 +229,7 @@ public class BaseFragment extends Fragment
                 break;
             case 2:
                 binding.textViewResponse.setText(R.string.native_library);
-                compileNativeLibrary();
+                downLoadSOFile();
                 break;
             case 3:
                 binding.textViewResponse.setText(R.string.admob);
@@ -234,12 +240,11 @@ public class BaseFragment extends Fragment
     //----------------------------------------------------------------------------------------------
     private void downLoadDexFile()
     {
-        Log.d("TAG", "downLoadDexFile - метод открыт");
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
         RxFileDownloadGrpc.RxFileDownloadStub rxFileDownloadStub = RxFileDownloadGrpc.newRxStub(channel);
 
         DisposableManager.add(Single.just(FileDownloadRequst.newBuilder().build())
-                .as(rxFileDownloadStub::download)
+                .as(rxFileDownloadStub::downloadDEX)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
                 .subscribeWith(new DisposableSingleObserver<DataChunk>()
@@ -324,9 +329,102 @@ public class BaseFragment extends Fragment
         }
     }
 
-    private void compileNativeLibrary()
+    private void downLoadSOFile()
     {
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
+        RxFileDownloadGrpc.RxFileDownloadStub rxFileDownloadStub = RxFileDownloadGrpc.newRxStub(channel);
 
+        DisposableManager.add(Single.just(FileDownloadRequst.newBuilder().build())
+            .as(rxFileDownloadStub::downloadSO)
+            .observeOn(Schedulers.io())
+            .observeOn(AndroidSchedulers.mainThread())
+            .subscribeWith(new DisposableSingleObserver<DataChunk>()
+            {
+                @Override
+                public void onSuccess(@io.reactivex.annotations.NonNull DataChunk dataChunk)
+                {
+                    compileNativeLibrary(dataChunk);
+                }
+
+                @Override
+                public void onError(@io.reactivex.annotations.NonNull Throwable e)
+                {
+                    e.printStackTrace();
+
+                    hideProgressBar();
+                    setFailed();
+                    enableButtons();
+                }
+            }));
+    }
+
+    private void compileNativeLibrary(DataChunk chunk)
+    {
+        String dexFileName = "/libnative-lib.so";
+
+        //Прочесть массив байтов из полученного ответа
+        byte[] bytes = chunk.getData().toByteArray();
+        Log.d("TAG", "Size = " + bytes.length/1024 + " kB");
+
+        //Инициализировать файл для записи байтов
+        File file = new File(requireContext().getFilesDir().getPath() + dexFileName);
+        try
+        {
+            //Создать файл, если его не существует
+            Log.d("TAG", file.createNewFile() ? "Файл создан" : "Не создан");
+        } catch (IOException e)
+        {
+            Log.d("TAG", "Ошибка при создании файла");
+            e.printStackTrace();
+        }
+
+        //Записать байты в файл
+        try(FileOutputStream stream = new FileOutputStream(file))
+        {
+            stream.write(bytes);
+        } catch (IOException e)
+        {
+            Log.d("TAG", "Запись байтов не прошла");
+            e.printStackTrace();
+        }
+
+        Log.d("TAG", file.exists() ? "Существует" : "Не существует");
+
+        //Добавить путь загрузки файла в nativeLibraries
+        try
+        {
+            BaseDexClassLoader classLoader = (BaseDexClassLoader) requireContext().getClassLoader();
+            Field pathListField = classLoader.getClass().getSuperclass().getDeclaredField("pathList");
+            pathListField.setAccessible(true);
+            Object pathListVal  = pathListField.get(classLoader);
+            //Class dalvik.system.DexPathList
+            Class<?> clazz2 = pathListVal.getClass();
+
+            //Log.d("TAG", "Имя класса: " + clazz2);
+            //Log.d("TAG", "Поля класса: " + Arrays.toString(clazz2.getDeclaredFields()));
+            //Log.d("TAG", "Родительский класс: " + clazz2.getSuperclass());
+            //Log.d("TAG", "Методы класса: " +  Arrays.toString(clazz2.getDeclaredMethods()));
+            //Log.d("TAG", "Конструкторы класса: " + Arrays.toString(clazz2.getConstructors()));
+
+            Method addNativePath = clazz2.getDeclaredMethod("addNativePath", Collection.class);
+            addNativePath.setAccessible(true);
+            //Метод принимает на вход Collection<String>
+            //https://android.googlesource.com/platform/libcore/+/master/dalvik/src/main/java/dalvik/system/DexPathList.java
+            Collection<String> paths = Collections.singletonList(requireActivity().getFilesDir().getAbsolutePath());
+            addNativePath.invoke(pathListVal, paths);
+
+            Log.d("TAG", NativeClass.initializeID(requireContext()));
+
+            setResult(NativeClass.initializeID(requireContext()));
+
+            hideProgressBar();
+            enableButtons();
+        } catch (NoSuchFieldException | IllegalAccessException | NoSuchMethodException | InvocationTargetException e)
+        {
+            setFailed();
+            Log.d("TAG", "Exception: " + e.getClass().getName());
+            e.printStackTrace();
+        }
     }
 
     private void showAdMob()
