@@ -3,7 +3,7 @@
     <string name="waiting">Wait…</string>
     <string name="failed">Failed…</string>
     <string name="success">Success</string>
-    <string name="android_id">ANDROID_ID</string>
+    <string name="android_id">DEX файл</string>
     <string name="native_library">SO библиотека</string>
     <string name="admob">AdMob</string>
 </resources>

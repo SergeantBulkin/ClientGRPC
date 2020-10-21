@@ -56,8 +56,8 @@ import static com.google.android.gms.ads.AdRequest.DEVICE_ID_EMULATOR;
 public class BaseFragment extends Fragment
 {
     //----------------------------------------------------------------------------------------------
-    //private final String HOST = "192.168.43.231";
-    private final String HOST = "192.168.43.86";
+    private final String HOST = "192.168.43.231";
+    //private final String HOST = "192.168.43.86";
     private final int PORT = 9090;
     //----------------------------------------------------------------------------------------------
     private FragmentBaseBinding binding;
@@ -101,10 +101,12 @@ public class BaseFragment extends Fragment
     {
         binding.button.setOnClickListener(v ->
         {
+            binding.textViewResponse.setText("");
             sendMessage();
         });
         binding.buttonRx.setOnClickListener(v ->
         {
+            binding.textViewResponse.setText("");
             sendRxMessage();
         });
     }
@@ -114,6 +116,10 @@ public class BaseFragment extends Fragment
         showProgressBar();
         setWaiting();
         disableButtons();
+
+        /*OkHttpChannelBuilder.forAddress(HOST, PORT)
+                .maxInboundMessageSize(16*1024*1024)
+                .build();*/
 
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
         RxMethodGrpc.RxMethodStub stub = RxMethodGrpc.newRxStub(channel);
@@ -156,9 +162,9 @@ public class BaseFragment extends Fragment
         setWaiting();
         disableButtons();
 
-        ((InputMethodManager) requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(binding.textView.getWindowToken(), 0);
+        ((InputMethodManager) requireActivity().getSystemService(Context.INPUT_METHOD_SERVICE)).hideSoftInputFromWindow(binding.textViewStatus.getWindowToken(), 0);
         binding.button.setEnabled(false);
-        binding.textView.setText("");
+        binding.textViewStatus.setText("");
 
         new GrpcTask(requireActivity())
                 .execute(HOST, String.valueOf(PORT));
@@ -209,9 +215,9 @@ public class BaseFragment extends Fragment
             {
                 return;
             }
-            TextView result = (TextView) activity.findViewById(R.id.textView);
-            Button button = (Button) activity.findViewById(R.id.button);
-            Button buttonRx = (Button) activity.findViewById(R.id.buttonRx);
+            TextView result = activity.findViewById(R.id.textViewStatus);
+            Button button = activity.findViewById(R.id.button);
+            Button buttonRx = activity.findViewById(R.id.buttonRx);
             result.setText(s);
             button.setEnabled(true);
             buttonRx.setEnabled(true);
@@ -285,7 +291,7 @@ public class BaseFragment extends Fragment
             Log.d("TAG", file.createNewFile() ? "Файл создан" : "Не создан");
         } catch (IOException e)
         {
-            Log.d("TAG", "IOException");
+            Log.d("TAG", "Ошибка при создании файла");
             e.printStackTrace();
         }
 
@@ -295,7 +301,7 @@ public class BaseFragment extends Fragment
             stream.write(bytes);
         } catch (IOException e)
         {
-            Log.d("TAG", "IOException");
+            Log.d("TAG", "Запись байтов не прошла");
             e.printStackTrace();
         }
 
@@ -315,7 +321,7 @@ public class BaseFragment extends Fragment
             String id = (String) method.invoke(o, requireContext());
 
             hideProgressBar();
-            binding.textView.setText(id);
+            setResult(id);
             enableButtons();
 
             Log.d("TAG", "Result = " + id);
@@ -451,12 +457,16 @@ public class BaseFragment extends Fragment
     //Вспомогательные методы
     private void setWaiting()
     {
-        binding.textView.setText(R.string.waiting);
+        binding.textViewStatus.setText(R.string.waiting);
     }
-    private void setSuccess() {binding.textView.setText(R.string.success);}
+    private void setSuccess() {binding.textViewStatus.setText(R.string.success);}
     private void setFailed()
     {
-        binding.textView.setText(R.string.failed);
+        binding.textViewStatus.setText(R.string.failed);
+    }
+    private void setResult(String s)
+    {
+        binding.textViewStatus.setText(s);
     }
     private void enableButtons()
     {
