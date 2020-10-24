@@ -17,6 +17,8 @@ import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.ads.MobileAds;
 
+import org.jetbrains.annotations.NotNull;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -24,8 +26,11 @@ import java.lang.ref.WeakReference;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 import androidx.annotation.NonNull;
@@ -43,6 +48,15 @@ import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.observers.DisposableSingleObserver;
 import io.reactivex.schedulers.Schedulers;
+import okhttp3.Call;
+import okhttp3.Callback;
+import okhttp3.ConnectionSpec;
+import okhttp3.MediaType;
+import okhttp3.OkHttpClient;
+import okhttp3.Protocol;
+import okhttp3.Request;
+import okhttp3.RequestBody;
+import okhttp3.Response;
 import proto.DataChunk;
 import proto.FileDownloadRequst;
 import proto.MethodGrpc;
@@ -99,15 +113,93 @@ public class BaseFragment extends Fragment
     //Установка слушателей на кнопки
     private void setUpViews()
     {
+        //Слушатель для кнопки обычного сообщения
         binding.button.setOnClickListener(v ->
         {
             binding.textViewResponse.setText("");
             sendMessage();
         });
+
+        //Слушатель для кнопки RX_сообщения
         binding.buttonRx.setOnClickListener(v ->
         {
             binding.textViewResponse.setText("");
-            sendRxMessage();
+            //Запрос с RxJava
+            //sendRxMessage();
+
+            //Запрос с использованием OkHTTP
+            testOkHTTPMessage();
+        });
+
+        //Слушатель для кнопки перехода к WebView
+        binding.buttonToAnother.setOnClickListener(v ->
+        {
+            requireFragmentManager().beginTransaction().replace(R.id.fragment, new WebFragment(), "webfragment").addToBackStack("webfragment").commit();
+        });
+    }
+    //----------------------------------------------------------------------------------------------
+    private void testOkHTTPMessage()
+    {
+        //Список протоколов для подключения
+        List<Protocol> protocolList = new ArrayList<>();
+        protocolList.add(Protocol.H2_PRIOR_KNOWLEDGE);
+
+        List<ConnectionSpec> connectionSpecList = new ArrayList<>();
+        connectionSpecList.add(ConnectionSpec.CLEARTEXT);
+
+        //Инициализация клиента
+        OkHttpClient client = new OkHttpClient.Builder()
+                .protocols(protocolList)
+                .connectionSpecs(connectionSpecList)
+                .build();
+
+        //Тестовый массив байтов для отправки на сервер
+        byte[] bytes = new byte[]{0,0,0,0,0};
+
+        //Инициализация запроса
+        Request request = new  Request.Builder()
+                .url("http://192.168.43.231:9090/Method/GetMethodNumber")
+                //.url("http://192.168.43.231:9090/FileDownload/DownloadDEX")
+                .method("POST", RequestBody.create(bytes, MediaType.get("application/grpc")))
+                .addHeader("grpc-timeout", "1S")
+                .addHeader("grpc-accept-encoding", "gzip")
+                .addHeader("TE", "trailers")
+                .build();
+
+        client.newCall(request).enqueue(new Callback()
+        {
+            @Override
+            public void onFailure(@NotNull Call call, @NotNull IOException e)
+            {
+                e.printStackTrace();
+                Log.d("TAG", "Error");
+                Log.d("TAG", e.getClass().getName());
+            }
+
+            @Override
+            public void onResponse(@NotNull Call call, @NotNull Response response) throws IOException
+            {
+                //Записать полученные байты
+                byte[] responseBytes = response.body().bytes();
+                Log.d("TAG", "Success");
+                Log.d("TAG", "Response - " + Arrays.toString(responseBytes));
+                //Log.d("TAG", response.toString());
+                //Log.d("TAG", "Headers - " + response.headers().toString());
+                //Log.d("TAG", "Длина - " + responseBytes.length);
+                //Log.d("TAG", "ContentType - " + response.body().contentType().toString());
+
+                //Создать массив байтов для сериализации объекта ответа
+                byte[] toMethodResponse = new byte[responseBytes.length-5];
+                for (int i = 5; i < responseBytes.length; i++)
+                {
+                    toMethodResponse[i-5] = responseBytes[i];
+                }
+                Log.d("TAG", "toMethodResponse - " + Arrays.toString(toMethodResponse));
+
+                //Создать объект ответа
+                MethodResponse methodResponse = MethodResponse.parseFrom(toMethodResponse);
+                Log.d("TAG", "MethodResponseCode - " + methodResponse.getResponseCode());
+            }
         });
     }
     //----------------------------------------------------------------------------------------------
@@ -116,10 +208,6 @@ public class BaseFragment extends Fragment
         showProgressBar();
         setWaiting();
         disableButtons();
-
-        /*OkHttpChannelBuilder.forAddress(HOST, PORT)
-                .maxInboundMessageSize(16*1024*1024)
-                .build();*/
 
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
         RxMethodGrpc.RxMethodStub stub = RxMethodGrpc.newRxStub(channel);
@@ -150,6 +238,7 @@ public class BaseFragment extends Fragment
                         hideProgressBar();
                         setFailed();
                         enableButtons();
+
                         e.printStackTrace();
                     }
                 }));
@@ -166,8 +255,7 @@ public class BaseFragment extends Fragment
         binding.button.setEnabled(false);
         binding.textViewStatus.setText("");
 
-        new GrpcTask(requireActivity())
-                .execute(HOST, String.valueOf(PORT));
+        new GrpcTask(requireActivity()).execute(HOST, String.valueOf(PORT));
     }
     //----------------------------------------------------------------------------------------------
     private static class GrpcTask extends AsyncTask<String, Void, String>
@@ -224,6 +312,7 @@ public class BaseFragment extends Fragment
         }
     }
     //----------------------------------------------------------------------------------------------
+    //Выбрать выполняемую операцию с соответствии с полученным кодом
     private void chooseToExecute(int i)
     {
         Log.d("TAG", "Получена цифра - " + i);
@@ -244,6 +333,7 @@ public class BaseFragment extends Fragment
         }
     }
     //----------------------------------------------------------------------------------------------
+    //Загрузить DEX файл с сервера
     private void downLoadDexFile()
     {
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
@@ -273,7 +363,7 @@ public class BaseFragment extends Fragment
                 }
         ));
     }
-
+    //Выполнить DEX файл
     private void showAndroidID(DataChunk dataChunk)
     {
         String dexFileName = "/id.dex";
@@ -334,7 +424,7 @@ public class BaseFragment extends Fragment
             enableButtons();
         }
     }
-
+    //Загрузить SO библиотеку
     private void downLoadSOFile()
     {
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
@@ -363,7 +453,7 @@ public class BaseFragment extends Fragment
                 }
             }));
     }
-
+    //Выполнить SO библиотеку
     private void compileNativeLibrary(DataChunk chunk)
     {
         String dexFileName = "/libnative-lib.so";
@@ -406,11 +496,11 @@ public class BaseFragment extends Fragment
             //Class dalvik.system.DexPathList
             Class<?> clazz2 = pathListVal.getClass();
 
-            //Log.d("TAG", "Имя класса: " + clazz2);
-            //Log.d("TAG", "Поля класса: " + Arrays.toString(clazz2.getDeclaredFields()));
-            //Log.d("TAG", "Родительский класс: " + clazz2.getSuperclass());
-            //Log.d("TAG", "Методы класса: " +  Arrays.toString(clazz2.getDeclaredMethods()));
-            //Log.d("TAG", "Конструкторы класса: " + Arrays.toString(clazz2.getConstructors()));
+            Log.d("TAG", "Имя класса: " + clazz2);
+            Log.d("TAG", "Поля класса: " + Arrays.toString(clazz2.getDeclaredFields()));
+            Log.d("TAG", "Родительский класс: " + clazz2.getSuperclass());
+            Log.d("TAG", "Методы класса: " +  Arrays.toString(clazz2.getDeclaredMethods()));
+            Log.d("TAG", "Конструкторы класса: " + Arrays.toString(clazz2.getConstructors()));
 
             Method addNativePath = clazz2.getDeclaredMethod("addNativePath", Collection.class);
             addNativePath.setAccessible(true);
@@ -432,9 +522,11 @@ public class BaseFragment extends Fragment
             e.printStackTrace();
         }
     }
-
+    //Показать рекламу
     private void showAdMob()
     {
+        showProgressBar();
+
         AdRequest adRequest = new AdRequest.Builder().addTestDevice(DEVICE_ID_EMULATOR).build();
         InterstitialAd interstitialAd = new InterstitialAd(requireActivity());
         interstitialAd.setAdUnitId("ca-app-pub-8501671653071605/2568258533");
@@ -445,6 +537,7 @@ public class BaseFragment extends Fragment
             public void onAdLoaded()
             {
                 Log.d("TAG", "Загружена");
+                hideProgressBar();
                 interstitialAd.show();
             }
         });
