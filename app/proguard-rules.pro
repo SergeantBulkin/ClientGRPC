@@ -25,6 +25,7 @@
 -keepclassmembers class proto.FileDownloadRequest { java.lang.String filename_; }
 -keepclassmembers class proto.DataChunk { com.google.protobuf.ByteString data_; }
 -keepclassmembers class proto.ResponseInt { int responseInt_; }
+
 # Для рекламы
 -keep public class com.google.android.gms.ads.**{ public *; }
 -keep public class com.google.ads.**{ public *; }

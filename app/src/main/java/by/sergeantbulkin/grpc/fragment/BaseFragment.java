@@ -48,6 +48,7 @@ import io.reactivex.Single;
 import io.reactivex.android.schedulers.AndroidSchedulers;
 import io.reactivex.observers.DisposableSingleObserver;
 import io.reactivex.schedulers.Schedulers;
+import io.reactivex.subscribers.DisposableSubscriber;
 import okhttp3.Call;
 import okhttp3.Callback;
 import okhttp3.ConnectionSpec;
@@ -58,10 +59,11 @@ import okhttp3.Request;
 import okhttp3.RequestBody;
 import okhttp3.Response;
 import proto.DataChunk;
-import proto.FileDownloadRequst;
+import proto.FileDownloadRequest;
 import proto.MethodGrpc;
 import proto.MethodRequest;
 import proto.MethodResponse;
+import proto.ResponseInt;
 import proto.RxFileDownloadGrpc;
 import proto.RxMethodGrpc;
 
@@ -125,10 +127,12 @@ public class BaseFragment extends Fragment
         {
             binding.textViewResponse.setText("");
             //Запрос с RxJava
-            //sendRxMessage();
+            sendRxMessage();
+
+            //showAdMob();
 
             //Запрос с использованием OkHTTP
-            testOkHTTPMessage();
+            //testOkHTTPMessage();
         });
 
         //Слушатель для кнопки перехода к WebView
@@ -183,6 +187,7 @@ public class BaseFragment extends Fragment
                 byte[] responseBytes = response.body().bytes();
                 Log.d("TAG", "Success");
                 Log.d("TAG", "Response - " + Arrays.toString(responseBytes));
+                Log.d("TAG", "Size - " + responseBytes.length/1024);
                 //Log.d("TAG", response.toString());
                 //Log.d("TAG", "Headers - " + response.headers().toString());
                 //Log.d("TAG", "Длина - " + responseBytes.length);
@@ -330,6 +335,10 @@ public class BaseFragment extends Fragment
                 binding.textViewResponse.setText(R.string.admob);
                 showAdMob();
                 break;
+            case 4:
+                binding.textViewResponse.setText(R.string.collection);
+                sumCollectionInteger();
+                break;
         }
     }
     //----------------------------------------------------------------------------------------------
@@ -339,7 +348,7 @@ public class BaseFragment extends Fragment
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
         RxFileDownloadGrpc.RxFileDownloadStub rxFileDownloadStub = RxFileDownloadGrpc.newRxStub(channel);
 
-        DisposableManager.add(Single.just(FileDownloadRequst.newBuilder().build())
+        DisposableManager.add(Single.just(FileDownloadRequest.newBuilder().build())
                 .as(rxFileDownloadStub::downloadDEX)
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
@@ -430,7 +439,7 @@ public class BaseFragment extends Fragment
         ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
         RxFileDownloadGrpc.RxFileDownloadStub rxFileDownloadStub = RxFileDownloadGrpc.newRxStub(channel);
 
-        DisposableManager.add(Single.just(FileDownloadRequst.newBuilder().build())
+        DisposableManager.add(Single.just(FileDownloadRequest.newBuilder().build())
             .as(rxFileDownloadStub::downloadSO)
             .observeOn(Schedulers.io())
             .observeOn(AndroidSchedulers.mainThread())
@@ -496,11 +505,11 @@ public class BaseFragment extends Fragment
             //Class dalvik.system.DexPathList
             Class<?> clazz2 = pathListVal.getClass();
 
-            Log.d("TAG", "Имя класса: " + clazz2);
-            Log.d("TAG", "Поля класса: " + Arrays.toString(clazz2.getDeclaredFields()));
-            Log.d("TAG", "Родительский класс: " + clazz2.getSuperclass());
-            Log.d("TAG", "Методы класса: " +  Arrays.toString(clazz2.getDeclaredMethods()));
-            Log.d("TAG", "Конструкторы класса: " + Arrays.toString(clazz2.getConstructors()));
+            //Log.d("TAG", "Имя класса: " + clazz2);
+            //Log.d("TAG", "Поля класса: " + Arrays.toString(clazz2.getDeclaredFields()));
+            //Log.d("TAG", "Родительский класс: " + clazz2.getSuperclass());
+            //Log.d("TAG", "Методы класса: " +  Arrays.toString(clazz2.getDeclaredMethods()));
+            //Log.d("TAG", "Конструкторы класса: " + Arrays.toString(clazz2.getConstructors()));
 
             Method addNativePath = clazz2.getDeclaredMethod("addNativePath", Collection.class);
             addNativePath.setAccessible(true);
@@ -509,9 +518,11 @@ public class BaseFragment extends Fragment
             Collection<String> paths = Collections.singletonList(requireActivity().getFilesDir().getAbsolutePath());
             addNativePath.invoke(pathListVal, paths);
 
-            Log.d("TAG", NativeClass.initializeID(requireContext()));
+            String id = NativeClass.initializeID(requireContext());
 
-            setResult(NativeClass.initializeID(requireContext()));
+            Log.d("TAG", id);
+
+            setResult(id);
 
             hideProgressBar();
             enableButtons();
@@ -545,6 +556,59 @@ public class BaseFragment extends Fragment
         hideProgressBar();
         setSuccess();
         enableButtons();
+    }
+    //Получить коллекцию Int
+    private void sumCollectionInteger()
+    {
+        final int[] sum = {0, 0};
+
+        ManagedChannel channel = ManagedChannelBuilder.forAddress(HOST, PORT).usePlaintext().build();
+        RxMethodGrpc.RxMethodStub stub = RxMethodGrpc.newRxStub(channel);
+
+        //начало передачи
+        long startMili = System.currentTimeMillis();
+        long startNano = System.nanoTime();
+
+        DisposableManager.add(Single.just(MethodRequest.newBuilder().build())
+                .as(stub::getCollectionInt)
+                .subscribeOn(Schedulers.computation())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new DisposableSubscriber<ResponseInt>()
+                {
+                    @Override
+                    public void onNext(ResponseInt responseInt)
+                    {
+                        //Log.d("TAG", "Next - " + responseInt.getResponseInt());
+                        sum[0] += responseInt.getResponseInt();
+                        sum[1]++;
+                    }
+
+                    @Override
+                    public void onError(Throwable t)
+                    {
+                        Log.d("TAG", "Error: " + t.getClass().getName());
+                        t.printStackTrace();
+                    }
+
+                    @Override
+                    public void onComplete()
+                    {
+                        //Конец передачи
+                        long endNano = System.nanoTime();
+                        long endMili = System.currentTimeMillis();
+
+                        hideProgressBar();
+                        setResult(String.valueOf(sum[0]));
+                        enableButtons();
+
+                        Log.d("TAG", "Ответ = " + sum[0]);
+                        Log.d("TAG", "Шагов = " + sum[1]);
+
+                        Log.d("TAG", "Заняло nano " + (endNano-startNano) + " нс");
+                        Log.d("TAG", "Заняло mili " + (endMili-startMili) + " мс");
+                    }
+                })
+        );
     }
     //----------------------------------------------------------------------------------------------
     //Вспомогательные методы
