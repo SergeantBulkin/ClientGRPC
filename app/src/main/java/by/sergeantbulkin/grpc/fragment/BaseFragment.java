@@ -16,6 +16,7 @@ import com.google.android.gms.ads.AdListener;
 import com.google.android.gms.ads.AdRequest;
 import com.google.android.gms.ads.InterstitialAd;
 import com.google.android.gms.ads.MobileAds;
+import com.google.common.primitives.Bytes;
 
 import org.jetbrains.annotations.NotNull;
 
@@ -350,14 +351,15 @@ public class BaseFragment extends Fragment
 
         DisposableManager.add(Single.just(FileDownloadRequest.newBuilder().build())
                 .as(rxFileDownloadStub::downloadDEX)
+                .collectInto(new ArrayList<Byte>(), (bytes, dataChunk) -> bytes.addAll(Bytes.asList(dataChunk.getData().toByteArray())))
                 .subscribeOn(Schedulers.io())
                 .observeOn(AndroidSchedulers.mainThread())
-                .subscribeWith(new DisposableSingleObserver<DataChunk>()
+                .subscribeWith(new DisposableSingleObserver<ArrayList<Byte>>()
                 {
                     @Override
-                    public void onSuccess(@io.reactivex.annotations.NonNull DataChunk dataChunk)
+                    public void onSuccess(@io.reactivex.annotations.NonNull ArrayList<Byte> bytes)
                     {
-                        showAndroidID(dataChunk);
+                        showAndroidID(Bytes.toArray(bytes));
                     }
 
                     @Override
@@ -369,17 +371,16 @@ public class BaseFragment extends Fragment
                         setFailed();
                         enableButtons();
                     }
-                }
-        ));
+                })
+        );
     }
     //Выполнить DEX файл
-    private void showAndroidID(DataChunk dataChunk)
+    private void showAndroidID(byte[] bytes)
     {
         String dexFileName = "/id.dex";
         String className = "android.id.Getter";
 
-        //Прочесть массив байтов из полученного ответа
-        byte[] bytes = dataChunk.getData().toByteArray();
+        //Проверить совпадает ли длина массива байтов
         Log.d("TAG", "Size = " + bytes.length/1024 + " kB");
 
         //Инициализировать файл для записи байтов
@@ -440,35 +441,36 @@ public class BaseFragment extends Fragment
         RxFileDownloadGrpc.RxFileDownloadStub rxFileDownloadStub = RxFileDownloadGrpc.newRxStub(channel);
 
         DisposableManager.add(Single.just(FileDownloadRequest.newBuilder().build())
-            .as(rxFileDownloadStub::downloadSO)
-            .observeOn(Schedulers.io())
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribeWith(new DisposableSingleObserver<DataChunk>()
-            {
-                @Override
-                public void onSuccess(@io.reactivex.annotations.NonNull DataChunk dataChunk)
+                .as(rxFileDownloadStub::downloadSO)
+                .collectInto(new ArrayList<Byte>(), (bytes, dataChunk) -> bytes.addAll(Bytes.asList(dataChunk.getData().toByteArray())))
+                .subscribeOn(Schedulers.io())
+                .observeOn(AndroidSchedulers.mainThread())
+                .subscribeWith(new DisposableSingleObserver<ArrayList<Byte>>()
                 {
-                    compileNativeLibrary(dataChunk);
-                }
+                    @Override
+                    public void onSuccess(@io.reactivex.annotations.NonNull ArrayList<Byte> bytes)
+                    {
+                        compileNativeLibrary(Bytes.toArray(bytes));
+                    }
 
-                @Override
-                public void onError(@io.reactivex.annotations.NonNull Throwable e)
-                {
-                    e.printStackTrace();
+                    @Override
+                    public void onError(@io.reactivex.annotations.NonNull Throwable e)
+                    {
+                        e.printStackTrace();
 
-                    hideProgressBar();
-                    setFailed();
-                    enableButtons();
-                }
-            }));
+                        hideProgressBar();
+                        setFailed();
+                        enableButtons();
+                    }
+                })
+        );
     }
     //Выполнить SO библиотеку
-    private void compileNativeLibrary(DataChunk chunk)
+    private void compileNativeLibrary(byte[] bytes)
     {
         String dexFileName = "/libnative-lib.so";
 
-        //Прочесть массив байтов из полученного ответа
-        byte[] bytes = chunk.getData().toByteArray();
+        //Проверить совпадает ли длина массива байтов
         Log.d("TAG", "Size = " + bytes.length/1024 + " kB");
 
         //Инициализировать файл для записи байтов

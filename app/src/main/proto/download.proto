@@ -6,8 +6,8 @@ option java_outer_classname = "FileDownloadProto";
 
 service FileDownload
 {
-  rpc DownloadDEX(FileDownloadRequest) returns (DataChunk);
-  rpc DownloadSO(FileDownloadRequest) returns (DataChunk);
+  rpc DownloadDEX(FileDownloadRequest) returns (stream DataChunk);
+  rpc DownloadSO(FileDownloadRequest) returns (stream DataChunk);
 }
 
 message DataChunk

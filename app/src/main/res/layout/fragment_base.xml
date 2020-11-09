@@ -5,7 +5,7 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     tools:context=".fragment.BaseFragment">
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <!--ProgressBar-->
     <ProgressBar
         android:id="@+id/createAbonentProgressBar"
@@ -18,7 +18,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintEnd_toEndOf="parent">
     </ProgressBar>
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <TextView
         android:id="@+id/textViewResponse"
         android:layout_width="wrap_content"
@@ -30,7 +30,7 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <TextView
         android:id="@+id/textViewStatus"
         android:layout_width="wrap_content"
@@ -42,7 +42,7 @@
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@id/textViewResponse"/>
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <Button
         android:id="@+id/button"
         android:layout_width="wrap_content"
@@ -53,7 +53,7 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/textViewStatus"
         app:layout_constraintBottom_toTopOf="@id/buttonToAnother"/>
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <Button
         android:id="@+id/buttonRx"
         android:layout_width="wrap_content"
@@ -63,7 +63,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.5"
         app:layout_constraintStart_toEndOf="@+id/button" />
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
     <Button
         android:id="@+id/buttonToAnother"
         android:layout_width="wrap_content"
@@ -73,5 +73,5 @@
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"/>
-    <!--==================================================================================-->
+    <!--=========================================================================================-->
 </androidx.constraintlayout.widget.ConstraintLayout>
